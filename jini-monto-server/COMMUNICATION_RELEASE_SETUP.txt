@@ -1,0 +1,57 @@
+JINI MONTO COMMUNICATION RELEASE
+================================
+
+This release replaces the old test-only TCP bridge with an API-connected bridge.
+It also adds the 65 ESP32 menu items to the API and a manual payment decision to the admin orders table.
+
+WHAT IT DOES
+- Current firmware sends ORDER|device_mac|sequence|reported_total|index:quantity,... over TCP port 5000.
+- Bridge maps item indexes 0..64 to product codes and POSTs to local API port 8000.
+- API calculates totals from its own menu prices; ESP32 reported total is diagnostic only.
+- API saves orders as awaiting_payment.
+- API enforces a unique idempotency key and order fingerprint; a retry after a lost ACK returns the original order.
+- Bridge ACKs after the API has saved or retrieved the matching order. Log-file errors do not invalidate the API order.
+- Admin can click Received or Not received in the Orders table.
+- Received manually marks the order paid and logs the admin action; Not received leaves it awaiting_payment.
+- No payment gateway and no dispensing/pump command is implemented.
+
+MENU MAPPING
+The authoritative index-to-product mapping is MENU_INDEX_TO_CODE in app/tcp_bridge.py.
+It follows the 65-entry Product table in SigmaCafe_LVGL_480x800.ino, covering
+Cold Coffee, Shakes, Hot Chocolate, Hot Coffee, Mojito, Chai, Ice Tea and Extras.
+
+INSTALL ON THE EXISTING PC
+1. Stop the API and TCP bridge with Ctrl+C in their own windows.
+2. In Downloads\\jini-monto-starter, back up these files:
+   app\\main.py -> app\\main_before_comm_release.py
+   app\\tcp_bridge.py -> app\\tcp_bridge_before_comm_release.py
+   static\\index.html -> static\\index_before_comm_release.html
+3. Extract this ZIP somewhere temporary.
+4. Copy the ZIP's jini-monto-starter\\app\\main.py over your project's app\\main.py.
+5. Copy app\\tcp_bridge.py and static\\index.html to their matching locations.
+   Do not copy any data directory or database from this ZIP; your existing database is retained.
+6. Start API in one Command Prompt:
+   cd %USERPROFILE%\\Downloads\\jini-monto-starter
+   .venv\\Scripts\\activate
+   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+7. Start bridge in a second Command Prompt:
+   cd %USERPROFILE%\\Downloads\\jini-monto-starter
+   .venv\\Scripts\\activate
+   python -m app.tcp_bridge
+8. Open http://127.0.0.1:8000 and refresh the Orders table.
+9. Send one small test order from ESP32 and confirm it appears as awaiting_payment.
+10. Test Received / Not received using test orders only.
+
+SECURITY CONFIGURATION
+- The API binds to loopback on port 8000. The TCP bridge binds to the reserved kiosk-PC Wi-Fi IP on port 5000 and authenticates each ESP32 message with a local-only HMAC key.
+- The HMAC key is stored in the ignored `.bridge_device_token` file and in the ignored kiosk `kiosk_config.h`; never add either file to source control.
+- Regenerate the same 64-character hexadecimal key in both local files if the kiosk is replaced or the key is suspected compromised.
+- Keep TCP port 5000 on the trusted store LAN; never port-forward it to the public internet.
+
+IMPORTANT LIMITATIONS
+- This is a local development release, not production-hardened software.
+- Manager API actions require the local `.admin_token`; the dashboard prompts for it and the bridge reads it locally. The token is sent over HTTP without TLS. Keep it on a trusted private LAN and do not expose ports 8000/5000 to the public internet.
+- Manual Received is a human assertion that funds were received, not a payment-gateway confirmation.
+- Current firmware persists its sequence counter in ESP32 NVS. Older firmware remains temporarily supported with weaker peer-address-based replay keys; update the kiosk firmware to use persistent device identity and sequence numbers.
+- No pump, relay, Modbus or dispensing code is connected or activated.
+- The API menu startup updates these 65 product names/prices and deactivates the eight legacy demo items. Existing order item snapshots are retained.
