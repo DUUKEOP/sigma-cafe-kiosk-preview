@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sigma Cafe · Kiosk Checkout Preview</title>
+<style>
+:root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#342317;background:#eee8dd;--bg:#f5f0e6;--card:#fffdf8;--dark:#342317;--muted:#786b61;--accent:#cf7040;--border:#e5d9c9}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:linear-gradient(135deg,#eee8dd,#e4d9ca)}
+.frame{width:min(100%,480px);min-height:min(800px,calc(100vh - 36px));background:var(--bg);border:1px solid var(--border);border-radius:24px;box-shadow:0 18px 56px #34231724;overflow:hidden;display:flex;flex-direction:column}
+header{padding:24px 24px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}h1{font-size:24px;letter-spacing:.04em;margin:0}header p{font-size:11px;letter-spacing:.12em;color:var(--muted);margin:6px 0 0}.tag{font-size:10px;color:#654f18;background:#fff1c8;border-radius:999px;padding:7px 9px;white-space:nowrap;font-weight:700}
+main{padding:12px 20px 20px;flex:1;display:flex;flex-direction:column}.crumb{font-size:12px;color:var(--muted);margin:0 0 14px}.title{font-size:22px;margin:0 0 5px}.sub{color:var(--muted);font-size:14px;margin:0 0 18px}.order{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px}.row{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin:8px 0}.row.total{border-top:1px solid var(--border);padding-top:12px;margin-top:14px;font-size:19px;font-weight:750;color:var(--accent)}
+.options{display:grid;gap:12px;margin-top:6px}.pay{width:100%;min-height:76px;border:0;border-radius:14px;padding:14px 16px;text-align:left;font:inherit;cursor:pointer}.pay strong{display:block;font-size:16px}.pay span{display:block;font-size:12px;margin-top:5px;opacity:.84}.counter{background:var(--dark);color:white}.upi{background:var(--accent);color:white}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin:14px 2px}.notice{border:1px solid #e7c986;background:#fff7df;border-radius:12px;padding:14px;color:#624d16;font-size:13px;line-height:1.5;margin:12px 0 18px}.hidden{display:none!important}.back{border:1px solid var(--border);background:var(--card);color:var(--dark);border-radius:10px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer}.spacer{flex:1;min-height:16px}footer{padding:12px 20px 16px;text-align:center;color:var(--muted);font-size:11px;border-top:1px solid var(--border)}
+.menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:auto;padding:2px 2px 10px;align-content:start}.product{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;min-width:0}.product img{display:block;width:min(100%,132px);height:96px;object-fit:contain;background:#e8ded0;margin:8px auto 0;border-radius:10px}.product-info{padding:9px}.product-name{font-size:13px;font-weight:700;min-height:32px;line-height:1.25}.product-bottom{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:8px}.product-price{font-size:13px;color:var(--accent);font-weight:700}.add{border:0;border-radius:8px;background:var(--dark);color:white;font-weight:700;padding:7px 10px;cursor:pointer}.menu-actions{padding-top:8px}.cart-count{font-size:12px;color:var(--muted);margin:0 0 7px}.continue{width:100%;padding:14px;background:var(--accent);color:white;border:0;border-radius:12px;font:inherit;font-weight:750;cursor:pointer}.continue:disabled{opacity:.5;cursor:default}
+.category-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px}.category-tab{min-height:40px;padding:7px 3px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--dark);font:inherit;font-size:11px;font-weight:700;cursor:pointer}.category-tab.active{background:var(--dark);border-color:var(--dark);color:white}.product-category{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.edit-order{width:100%;margin:-4px 0 14px}
+.cart-items{display:grid;gap:9px;overflow:auto;margin-bottom:12px}.cart-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px}.cart-line-name strong{display:block;font-size:14px}.cart-line-name span{display:block;font-size:11px;color:var(--muted);margin-top:3px}.qty-control{display:flex;align-items:center;gap:8px}.qty-control button{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--dark);font:inherit;font-size:18px;font-weight:700;cursor:pointer}.qty-control span{min-width:16px;text-align:center;font-weight:700}.cart-line-total{grid-column:1/-1;text-align:right;font-size:13px;font-weight:700;color:var(--accent)}.empty-cart{padding:24px;text-align:center;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:12px}.cart-total{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin:4px 0 12px;font-size:18px;font-weight:750;display:flex;justify-content:space-between}
+@media(max-height:680px){.frame{min-height:0}header{padding-top:16px}main{padding-top:4px}.order{padding:12px}.pay{min-height:64px}}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header><div><h1>SIGMA CAFE</h1><p>FRESHLY MADE FOR YOU</p></div><span class="tag">KIOSK PREVIEW · 65 ITEMS</span></header>
+  <main id="menuView">
+    <p class="crumb">MENU</p>
+    <h2 class="title">Choose your favourites</h2>
+    <p class="sub">Tap + to add items to your order.</p>
+    <nav class="category-tabs" id="categoryTabs" aria-label="Menu categories"></nav>
+    <div class="menu-grid" id="menuGrid" aria-label="Cafe menu"></div>
+    <div class="menu-actions"><p class="cart-count" id="cartCount"></p><button class="continue" id="viewCartButton">View Cart</button></div>
+  </main>
+  <main id="cartView" class="hidden">
+    <p class="crumb">MENU&nbsp; / &nbsp;YOUR CART</p>
+    <h2 class="title">Your Cart</h2>
+    <p class="sub">Review your items and adjust quantities.</p>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-total"><span>Total</span><span id="cartTotal"></span></div>
+    <button class="continue" id="cartCheckoutButton">Continue to payment</button>
+    <button class="back" id="cartBackButton" style="width:100%;margin-top:10px">Back to menu</button>
+  </main>
+  <main id="paymentView" class="hidden">
+    <p class="crumb">YOUR CART&nbsp; / &nbsp;PAYMENT</p>
+    <h2 class="title">Choose how to pay</h2>
+    <p class="sub">Your order is ready. Select one payment option.</p>
+    <section class="order" id="paymentSummary" aria-label="Order summary">
+    </section>
+    <button class="back edit-order" id="editOrderButton">Back to Cart / Edit Order</button>
+    <div class="options">
+      <button class="pay counter" id="counterButton"><strong>Pay at Counter</strong><span>Place your order and pay the staff in person</span></button>
+      <button class="pay upi" id="upiButton"><strong>Pay Here with UPI</strong><span>Scan a QR code with your phone</span></button>
+    </div>
+    <p class="hint">This preview shows the planned ESP32 checkout. It does not place an order or process a payment.</p>
+    <div class="spacer"></div>
+  </main>
+  <main id="upiView" class="hidden">
+    <p class="crumb">YOUR CART&nbsp; / &nbsp;UPI</p>
+    <h2 class="title">UPI payment is not connected yet</h2>
+    <p class="sub">The live gateway and payment QR are not configured.</p>
+    <div class="notice"><strong>No order was placed and no payment was taken.</strong><br>Once a gateway is connected, this screen will show a payment QR and the kiosk will wait for verified server confirmation.</div>
+    <button class="back" id="backButton">Back to payment options</button>
+    <div class="spacer"></div>
+  </main>
+  <main id="counterView" class="hidden">
+    <p class="crumb">YOUR CART&nbsp; / &nbsp;COUNTER PAYMENT</p>
+    <h2 class="title">Pay at the counter</h2>
+    <p class="sub">On the ESP32 kiosk, this choice sends your order to the cafe server.</p>
+    <div class="notice">This browser preview does not submit an order. Please use the kiosk for a real counter order.</div>
+    <button class="back" id="counterBackButton">Back to payment options</button>
+    <div class="spacer"></div>
+  </main>
+  <footer>JINI MONTO · Software preview · No payment is processed</footer>
+</div>
+<script>
+const products=[
+  {
+    "name": "Ice Americano",
+    "category": "Cold Coffee",
+    "price": 159,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Cold Frappe",
+    "category": "Cold Coffee",
+    "price": 189,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Caramel Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Irish Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "French Vanilla Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Hazelnut Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Biscoff Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Tiramisu Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Choco Almond Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Java Chips Frappe",
+    "category": "Cold Coffee",
+    "price": 219,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Mocha Frappe",
+    "category": "Cold Coffee",
+    "price": 229,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Cookies Crumble Frappe",
+    "category": "Cold Coffee",
+    "price": 229,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Brownie Frappe",
+    "category": "Cold Coffee",
+    "price": 229,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Oreo Frappe",
+    "category": "Cold Coffee",
+    "price": 229,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "BB Special Frappe",
+    "category": "Cold Coffee",
+    "price": 259,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Strawberry Shake",
+    "category": "Shakes",
+    "price": 229,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Oreo Shake",
+    "category": "Shakes",
+    "price": 229,
+    "image": "oreo_shake.jpg"
+  },
+  {
+    "name": "Hazelnut",
+    "category": "Shakes",
+    "price": 229,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Kit Kat Shake",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Triple Chocolate Shake",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Red Velvet Fudge Shake",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Mud Pie Shake",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Choco Almond Shake",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Tiramisu Truffle",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Choco Hazelnut",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Brownie Shake",
+    "category": "Shakes",
+    "price": 239,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Cookies Crumble Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "White Chocolate Kitkat Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Nutella Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Oreo Strawberry Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "oreo_shake.jpg"
+  },
+  {
+    "name": "Ferrero Rocher Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Tiramisu Brownie Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Mocha Brownie Shake",
+    "category": "Shakes",
+    "price": 249,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "BB Special",
+    "category": "Shakes",
+    "price": 259,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Biscoff Delight",
+    "category": "Shakes",
+    "price": 259,
+    "image": "chocolate_shake.jpg"
+  },
+  {
+    "name": "Premium Hot Chocolate",
+    "category": "Hot Chocolate",
+    "price": 179,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "Hazelnut Hot Chocolate",
+    "category": "Hot Chocolate",
+    "price": 199,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "Irish Hot Chocolate",
+    "category": "Hot Chocolate",
+    "price": 199,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "Tiramisu Hot Chocolate",
+    "category": "Hot Chocolate",
+    "price": 199,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "French Vanilla Hot Chocolate",
+    "category": "Hot Chocolate",
+    "price": 199,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "Nutella Hot Chocolate",
+    "category": "Hot Chocolate",
+    "price": 239,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "Espresso",
+    "category": "Hot Coffee",
+    "price": 119,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Hot Americano",
+    "category": "Hot Coffee",
+    "price": 139,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Cappuccino",
+    "category": "Hot Coffee",
+    "price": 159,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Cafe Latte",
+    "category": "Hot Coffee",
+    "price": 179,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Cafe Mocha",
+    "category": "Hot Coffee",
+    "price": 189,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Irish Latte",
+    "category": "Hot Coffee",
+    "price": 189,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Hazelnut Latte",
+    "category": "Hot Coffee",
+    "price": 189,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Vanilla Latte",
+    "category": "Hot Coffee",
+    "price": 189,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Tiramisu",
+    "category": "Hot Coffee",
+    "price": 189,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Biscoff Latte",
+    "category": "Hot Coffee",
+    "price": 189,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Mint Mojito",
+    "category": "Mojito",
+    "price": 169,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Strawberry Mojito",
+    "category": "Mojito",
+    "price": 169,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Watermelon",
+    "category": "Mojito",
+    "price": 169,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Kiwi Mojito",
+    "category": "Mojito",
+    "price": 179,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Red Bull",
+    "category": "Mojito",
+    "price": 269,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Masala Chai",
+    "category": "Chai",
+    "price": 49,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Adrak Elaichi Chai",
+    "category": "Chai",
+    "price": 59,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Chai + Toast Combo",
+    "category": "Chai",
+    "price": 99,
+    "image": "classic_coffee.jpg"
+  },
+  {
+    "name": "Lemon Ice Tea",
+    "category": "Ice Tea",
+    "price": 149,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Peach Ice Tea",
+    "category": "Ice Tea",
+    "price": 149,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Fresh Strawberry Ice Tea",
+    "category": "Ice Tea",
+    "price": 179,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Watermelon Ice Tea",
+    "category": "Ice Tea",
+    "price": 159,
+    "image": "cold_coffee.jpg"
+  },
+  {
+    "name": "Extra Cheese",
+    "category": "Extras",
+    "price": 29,
+    "image": "chocolate_scoop.jpg"
+  },
+  {
+    "name": "Extra Mayonnaise",
+    "category": "Extras",
+    "price": 29,
+    "image": "chocolate_scoop.jpg"
+  }
+];
+const categories=["Cold Coffee", "Shakes", "Hot Chocolate", "Hot Coffee", "Mojito", "Chai", "Ice Tea", "Extras"];
+let activeCategory=categories[0];
+const quantities=products.map(()=>0);
+const views=['menuView','cartView','paymentView','upiView','counterView'];
+function showView(id){for(const view of views)document.getElementById(view).classList.toggle('hidden',view!==id)}
+function rupees(value){return '₹'+value.toLocaleString('en-IN')}
+function refreshMenu(){
+  const tabs=document.getElementById('categoryTabs');
+  tabs.innerHTML=categories.map(category=>`<button class="category-tab${category===activeCategory?' active':''}" data-category="${category}" aria-pressed="${category===activeCategory}">${category}</button>`).join('');
+  tabs.querySelectorAll('[data-category]').forEach(button=>button.addEventListener('click',()=>{activeCategory=button.dataset.category;refreshMenu()}));
+  const visibleProducts=products.map((p,i)=>({p,i})).filter(({p})=>p.category===activeCategory);
+  const grid=document.getElementById('menuGrid');
+  grid.setAttribute('aria-label',`${activeCategory} menu`);
+  grid.innerHTML=visibleProducts.map(({p,i})=>`<article class="product"><img src="./kiosk-assets/${p.image}" alt="${p.name}" loading="lazy"><div class="product-info"><div class="product-category">${p.category}</div><div class="product-name">${p.name}</div><div class="product-bottom"><span class="product-price">${rupees(p.price)}</span><button class="add" data-add="${i}" aria-label="Add ${p.name}">+ Add</button></div></div></article>`).join('');
+  document.getElementById('menuGrid').querySelectorAll('[data-add]').forEach(button=>button.addEventListener('click',()=>{const i=Number(button.dataset.add);if(quantities[i]<50)quantities[i]++;updateCartUI()}));
+  updateCartUI();
+}
+function updateCartUI(){
+  const count=quantities.reduce((sum,q)=>sum+q,0),total=quantities.reduce((sum,q,i)=>sum+q*products[i].price,0);
+  document.getElementById('cartCount').textContent=`${count} item${count===1?'':'s'} in cart · ${rupees(total)}`;
+  document.getElementById('viewCartButton').textContent=`View Cart · ${count} item${count===1?'':'s'}`;
+  document.getElementById('cartTotal').textContent=rupees(total);
+  const lines=products.map((p,i)=>({p,i,q:quantities[i]})).filter(item=>item.q>0);
+  const cartItems=document.getElementById('cartItems');
+  cartItems.innerHTML=lines.length?lines.map(({p,i,q})=>`<article class="cart-line"><div class="cart-line-name"><strong>${p.name}</strong><span>${rupees(p.price)} each</span></div><div class="qty-control"><button data-dec="${i}" aria-label="Remove one ${p.name}">−</button><span>${q}</span><button data-inc="${i}" aria-label="Add one ${p.name}">+</button></div><div class="cart-line-total">${rupees(q*p.price)}</div></article>`).join(''):'<div class="empty-cart">Your cart is empty.<br>Go back to the menu to add items.</div>';
+  cartItems.querySelectorAll('[data-dec]').forEach(button=>button.addEventListener('click',()=>{const i=Number(button.dataset.dec);if(quantities[i]>0)quantities[i]--;updateCartUI()}));
+  cartItems.querySelectorAll('[data-inc]').forEach(button=>button.addEventListener('click',()=>{const i=Number(button.dataset.inc);if(quantities[i]<50)quantities[i]++;updateCartUI()}));
+  document.getElementById('cartCheckoutButton').disabled=count===0;
+  document.getElementById('paymentSummary').innerHTML=products.map((p,i)=>quantities[i]?`<div class="row"><span>${p.name}</span><span>${quantities[i]} × ${rupees(p.price)}</span></div>`:'').join('')+`<div class="row total"><span>Total</span><span>${rupees(total)}</span></div>`;
+}
+refreshMenu();
+document.getElementById('viewCartButton').addEventListener('click',()=>showView('cartView'));
+document.getElementById('cartBackButton').addEventListener('click',()=>showView('menuView'));
+document.getElementById('cartCheckoutButton').addEventListener('click',()=>showView('paymentView'));
+document.getElementById('editOrderButton').addEventListener('click',()=>showView('cartView'));
+document.getElementById('upiButton').addEventListener('click',()=>showView('upiView'));
+document.getElementById('counterButton').addEventListener('click',()=>showView('counterView'));
+document.getElementById('backButton').addEventListener('click',()=>showView('paymentView'));
+document.getElementById('counterBackButton').addEventListener('click',()=>showView('paymentView'));
+</script>
+</body>
+</html>
