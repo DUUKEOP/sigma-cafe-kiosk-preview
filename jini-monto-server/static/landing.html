@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JINI MONTO Café</title>
+<style>
+:root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#172033;background:#f3f5f8}*{box-sizing:border-box}body{margin:0}header{background:#14243b;color:#fff;padding:24px max(22px,calc((100vw - 1040px)/2))}header h1{margin:0 0 6px}header p{margin:0;color:#d7e1ee}.wrap{max-width:1040px;margin:auto;padding:28px 22px}.note{padding:14px;background:#fff7df;border-radius:10px;color:#624d16;font-size:14px;margin-bottom:22px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}.card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 3px 14px #18233a0b;border-top:5px solid #cf7040}.card.manager{border-top-color:#1f5eff}.card h2{margin:0 0 8px}.card p{color:#536177;line-height:1.5;min-height:48px}.action{display:inline-block;margin-top:10px;padding:12px 16px;border-radius:9px;background:#cf7040;color:#fff;text-decoration:none;font-weight:700}.manager .action{background:#1f5eff}.muted{color:#637188;font-size:13px;margin-top:20px}@media(max-width:600px){.wrap{padding:16px}}
+</style>
+</head>
+<body>
+<header><h1>JINI MONTO</h1><p>Café operations · Choose your workspace</p></header>
+<main class="wrap">
+<div class="note"><b>Software-only prototype.</b> Payments are recorded manually. No payment gateway or dispensing hardware is connected.</div>
+<div class="grid">
+<section class="card"><h2>Kiosk Checkout Preview</h2><p>Preview the customer payment choices planned for the ESP32 kiosk.</p><a class="action" href="/static/kiosk-preview.html">Open Kiosk Preview →</a><p class="muted">Preview only. It does not create orders or process payments.</p></section>
+<section class="card"><h2>Employee Page</h2><p>Create counter orders, view unpaid orders, and record cash received.</p><a class="action" href="/employee">Open Employee Page →</a></section>
+<section class="card manager"><h2>Manager Page</h2><p>Review orders and payment decisions, manage attendance and salary estimates, and view reports.</p><a class="action" href="/manager">Open Manager Page →</a><p class="muted">Manager actions require the local manager token.</p></section>
+</div>
+</main>
+</body>
+</html>
