@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.admin_token
+.bridge_device_token
+.device_token
+data/
+*.db
+*.jsonl
+runlogs/
+.task-temp/
+.DS_Store
