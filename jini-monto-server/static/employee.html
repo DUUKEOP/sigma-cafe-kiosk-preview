@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JINI MONTO — Employee</title>
+<style>
+:root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#172033;background:#f3f5f8}*{box-sizing:border-box}body{margin:0}header{background:#342317;color:#fff;padding:20px max(16px,calc((100vw - 1100px)/2));display:flex;justify-content:space-between;align-items:center;gap:16px}header h1{margin:0 0 4px}header p{margin:0;color:#eadccf}.manager-link{color:#fff;background:#5a4231;padding:10px 14px;border-radius:9px;text-decoration:none;font-weight:700;white-space:nowrap}.wrap{max-width:1100px;margin:auto;padding:22px}.notice{padding:12px 14px;background:#fff7df;border-radius:10px;color:#624d16;font-size:13px;margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}.panel{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 3px 14px #18233a0b}.panel h2{margin:0 0 10px}label{display:block;font-size:13px;color:#536177;margin:10px 0 5px}input,select{width:100%;padding:10px;border:1px solid #cdd5e0;border-radius:8px;background:#fff;font:inherit}button{border:0;border-radius:9px;padding:11px 14px;cursor:pointer;background:#cf7040;color:#fff;font-weight:700}button:disabled{opacity:.5;cursor:not-allowed}.muted{color:#637188;font-size:13px}.status{display:block;min-height:20px;margin-top:10px;color:#4b5a70}.denoms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.denom{border:1px solid #e0e5ed;border-radius:9px;padding:8px}.denom label{margin:0 0 5px}.money{font-size:21px;font-weight:750}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;margin-top:10px}td,th{padding:9px;border-bottom:1px solid #e7ebf0;text-align:left;font-size:14px}@media(max-width:600px){.wrap{padding:12px}.denoms{grid-template-columns:repeat(2,minmax(0,1fr))}header{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<header><div><h1>JINI MONTO · Employee</h1><p>Order entry and cash collection</p></div><a class="manager-link" href="/manager">Manager Page →</a></header>
+<main class="wrap">
+<div class="notice"><b>Employee workspace:</b> Use this page for counter orders and cash collection. Manager reports and payment reviews are in the separate Manager Page. This prototype does not provide individual employee sign-in.</div>
+<div class="grid">
+<section class="panel">
+<h2>Create counter order</h2>
+<label for="product">Product</label><select id="product"></select>
+<label for="qty">Quantity</label><input id="qty" type="number" min="1" max="50" value="1">
+<label for="orderNote">Order note</label><input id="orderNote" maxlength="500" placeholder="Optional note">
+<button id="createOrder">Create order</button><span class="status" id="createMessage" role="status"></span>
+</section>
+<section class="panel">
+<h2>Record cash received</h2>
+<label for="orderToPay">Unpaid order</label><select id="orderToPay"></select>
+<label for="cashStaff">Employee receiving cash</label><select id="cashStaff"></select>
+<label for="cashNote">Cash note</label><input id="cashNote" maxlength="500" value="Cash received at counter">
+<p class="muted">Enter the count of each note or coin.</p><div class="denoms" id="denomInputs"></div>
+<p>Cash received: <b id="cashTotal">₹0.00</b><br>Order total: <b id="billTotal">₹0.00</b> · Change: <b id="changeDue">₹0.00</b></p>
+<button id="confirmCash">Confirm cash received</button><span class="status" id="cashMessage" role="status"></span>
+</section>
+</div>
+<section class="panel"><h2>Unpaid orders</h2><button id="refreshOrders">Refresh orders</button><div id="ordersTable"></div></section>
+<p class="muted">Prototype only · Cash entries are recorded locally. No live payment processing or dispensing is connected.</p>
+</main>
+<script>
+const denominations=[500,200,100,50,20,10,5,2,1];let menu=[],orders=[],staff=[];
+const fmtMoney=p=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format((p||0)/100);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});const raw=await r.text();let d;try{d=raw?JSON.parse(raw):{}}catch{d={detail:raw||r.statusText}}if(!r.ok)throw new Error(d.detail||r.statusText);return d}
+function setOptions(id,items,label,value){const e=document.getElementById(id);e.innerHTML='';items.forEach(x=>{const o=document.createElement('option');o.value=value(x);o.textContent=label(x);e.appendChild(o)})}
+function cashTotal(){return denominations.reduce((n,d)=>n+d*Number(document.getElementById('denom-'+d).value||0)*100,0)}
+function updateCash(){const selected=orders.find(o=>o.order_no===document.getElementById('orderToPay').value);const total=cashTotal();document.getElementById('cashTotal').textContent=fmtMoney(total);document.getElementById('billTotal').textContent=fmtMoney(selected?.total_paise||0);document.getElementById('changeDue').textContent=selected?(total>=(selected.total_paise||0)?fmtMoney(total-selected.total_paise):'Insufficient cash'):'—';document.getElementById('confirmCash').disabled=!selected}
+function renderDenoms(){document.getElementById('denomInputs').innerHTML=denominations.map(d=>`<div class="denom"><label for="denom-${d}">₹${d} count</label><input id="denom-${d}" type="number" min="0" max="10000" value="0"></div>`).join('');denominations.forEach(d=>document.getElementById('denom-'+d).addEventListener('input',updateCash))}
+async function loadOrders(){orders=await api('/api/employee/orders');setOptions('orderToPay',orders,o=>`${o.order_no} — ${fmtMoney(o.total_paise)}`,o=>o.order_no);const rows=orders.map(o=>`<tr><td>${esc(o.order_no)}</td><td>${(o.items||[]).map(i=>`${esc(i.quantity)} × ${esc(i.product_name_snapshot)}`).join(', ')}</td><td>${fmtMoney(o.total_paise)}</td><td>${esc(o.created_at)}</td></tr>`).join('');document.getElementById('ordersTable').innerHTML=rows?`<div class="table-wrap"><table><thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">No unpaid orders.</p>';updateCash()}
+async function init(){renderDenoms();[menu,staff]=await Promise.all([api('/api/menu'),api('/api/employee/staff')]);setOptions('product',menu,p=>`${p.name} — ${fmtMoney(p.price_paise)}`,p=>p.code);setOptions('cashStaff',staff,s=>s.name,s=>s.name);await loadOrders()}
+document.getElementById('createOrder').onclick=async()=>{const button=document.getElementById('createOrder');button.disabled=true;try{const o=await api('/api/orders',{method:'POST',body:JSON.stringify({source:'staff_counter',items:[{product_code:document.getElementById('product').value,quantity:Number(document.getElementById('qty').value)}],discount_paise:0,customer_note:document.getElementById('orderNote').value})});document.getElementById('createMessage').textContent=`Created ${o.order_no}; total ${fmtMoney(o.total_paise)}. Awaiting payment.`;await loadOrders()}catch(e){document.getElementById('createMessage').textContent=e.message}finally{button.disabled=false}};
+document.getElementById('confirmCash').onclick=async()=>{const button=document.getElementById('confirmCash');button.disabled=true;try{const orderNo=document.getElementById('orderToPay').value;if(!orderNo)throw new Error('Choose an unpaid order first');const counts=Object.fromEntries(denominations.map(d=>[String(d),Number(document.getElementById('denom-'+d).value||0)]));const p=await api(`/api/orders/${encodeURIComponent(orderNo)}/cash-payment`,{method:'POST',body:JSON.stringify({staff_name:document.getElementById('cashStaff').value,denominations:counts,note:document.getElementById('cashNote').value})});document.getElementById('cashMessage').textContent=`${p.order_no} paid. Cash received ${fmtMoney(p.cash_received_paise)}; change ${fmtMoney(p.change_paise)}.`;denominations.forEach(d=>document.getElementById('denom-'+d).value=0);await loadOrders()}catch(e){document.getElementById('cashMessage').textContent=e.message}finally{button.disabled=false;updateCash()}};
+document.getElementById('orderToPay').onchange=updateCash;document.getElementById('refreshOrders').onclick=()=>loadOrders().catch(e=>document.getElementById('cashMessage').textContent=e.message);init().catch(e=>{document.getElementById('createMessage').textContent='Could not load employee page: '+e.message})
+</script>
+</body>
+</html>
