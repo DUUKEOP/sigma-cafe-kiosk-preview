@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="jini-api-base" content="https://jini-monto-api-preview.onrender.com">
 <title>Sigma Cafe · Kiosk Checkout Preview</title>
 <style>
 :root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#342317;background:#eee8dd;--bg:#f5f0e6;--card:#fffdf8;--dark:#342317;--muted:#786b61;--accent:#cf7040;--border:#e5d9c9}
@@ -47,16 +48,16 @@ main{padding:12px 20px 20px;flex:1;display:flex;flex-direction:column}.crumb{fon
     <button class="back edit-order" id="editOrderButton">Back to Cart / Edit Order</button>
     <div class="options">
       <button class="pay counter" id="counterButton"><strong>Pay at Counter</strong><span>Place your order and pay the staff in person</span></button>
-      <button class="pay upi" id="upiButton"><strong>Pay Here with UPI</strong><span>Scan a QR code with your phone</span></button>
+      <button class="pay upi" id="upiButton"><strong>Pay with Razorpay</strong><span>UPI or card in Razorpay Checkout</span></button>
     </div>
-    <p class="hint">This preview shows the planned ESP32 checkout. It does not place an order or process a payment.</p>
+    <p class="hint">Online checkout requires the deployed JINI API. Payment is confirmed by the server after gateway verification.</p>
     <div class="spacer"></div>
   </main>
   <main id="upiView" class="hidden">
     <p class="crumb">YOUR CART&nbsp; / &nbsp;UPI</p>
-    <h2 class="title">UPI payment is not connected yet</h2>
-    <p class="sub">The live gateway and payment QR are not configured.</p>
-    <div class="notice"><strong>No order was placed and no payment was taken.</strong><br>Once a gateway is connected, this screen will show a payment QR and the kiosk will wait for verified server confirmation.</div>
+    <h2 class="title">Razorpay Checkout</h2>
+    <p class="sub" id="razorpayMessage">Preparing your order securely…</p>
+    <div class="notice" id="razorpayNotice">The server calculates the price and confirms payment. Do not close this page until the status is shown.</div>
     <button class="back" id="backButton">Back to payment options</button>
     <div class="spacer"></div>
   </main>
@@ -68,9 +69,10 @@ main{padding:12px 20px 20px;flex:1;display:flex;flex-direction:column}.crumb{fon
     <button class="back" id="counterBackButton">Back to payment options</button>
     <div class="spacer"></div>
   </main>
-  <footer>JINI MONTO · Software preview · No payment is processed</footer>
+  <footer>JINI MONTO · Razorpay checkout · Requires configured HTTPS API</footer>
 </div>
 <script>
+const JINI_API_BASE=(document.querySelector('meta[name="jini-api-base"]')?.content||'').replace(/\/+$/,'');
 const products=[
   {
     "name": "Ice Americano",
@@ -498,7 +500,56 @@ document.getElementById('viewCartButton').addEventListener('click',()=>showView(
 document.getElementById('cartBackButton').addEventListener('click',()=>showView('menuView'));
 document.getElementById('cartCheckoutButton').addEventListener('click',()=>showView('paymentView'));
 document.getElementById('editOrderButton').addEventListener('click',()=>showView('cartView'));
-document.getElementById('upiButton').addEventListener('click',()=>showView('upiView'));
+let checkoutIdempotencyKey=sessionStorage.getItem('jini-checkout-key')||'';
+function checkoutMessage(message){document.getElementById('razorpayMessage').textContent=message}
+function normalizedName(value){return value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
+async function fetchJson(path,options={}){
+  const response=await fetch(`${JINI_API_BASE}${path}`,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.detail||`Server returned ${response.status}`);
+  return data;
+}
+function loadRazorpay(){return new Promise((resolve,reject)=>{if(window.Razorpay)return resolve();const s=document.createElement('script');s.src='https://checkout.razorpay.com/v1/checkout.js';s.onload=resolve;s.onerror=()=>reject(new Error('Could not load Razorpay Checkout'));document.head.appendChild(s)})}
+async function monitorPayment(orderNo,statusToken){
+  for(let i=0;i<40;i++){
+    const state=await fetchJson(`/api/payments/razorpay/status/${encodeURIComponent(orderNo)}?token=${encodeURIComponent(statusToken)}`);
+    if(state.status==='paid'){checkoutMessage(`Payment verified. Order ${orderNo} is paid.`);document.getElementById('razorpayNotice').textContent='The server verified the captured payment. Keep this order number for reference.';sessionStorage.removeItem('jini-checkout-key');return}
+    if(['failed','expired','review_required'].includes(state.status)){checkoutMessage(`Payment status: ${state.status.replace('_',' ')}. Order ${orderNo}.`);return}
+    checkoutMessage(`Waiting for verified payment · Order ${orderNo}`);
+    await new Promise(resolve=>setTimeout(resolve,3000));
+  }
+  checkoutMessage(`Payment is still processing. Order ${orderNo}; check again before paying a second time.`);
+}
+document.getElementById('upiButton').addEventListener('click',async()=>{
+  showView('upiView');
+  document.getElementById('razorpayNotice').textContent='';
+  if(!JINI_API_BASE){checkoutMessage('Checkout is not connected. Configure the deployed API URL in this page before using payments.');return}
+  try{
+    checkoutMessage('Creating your order…');
+    const menu=await fetchJson('/api/menu');
+    const items=[];
+    for(let i=0;i<products.length;i++)if(quantities[i]){
+      const product=menu.find(item=>normalizedName(item.name)===normalizedName(products[i].name));
+      if(!product)throw new Error(`Menu item unavailable: ${products[i].name}`);
+      items.push({product_code:product.code,quantity:quantities[i]});
+    }
+    if(!items.length)throw new Error('Your cart is empty');
+    if(!checkoutIdempotencyKey){checkoutIdempotencyKey=crypto.randomUUID();sessionStorage.setItem('jini-checkout-key',checkoutIdempotencyKey)}
+    const order=await fetchJson('/api/orders',{method:'POST',body:JSON.stringify({source:'customer_kiosk',items,idempotency_key:checkoutIdempotencyKey})});
+    const checkout=await fetchJson(`/api/orders/${encodeURIComponent(order.order_no)}/razorpay`,{method:'POST',body:'{}'});
+    await loadRazorpay();
+    checkoutMessage(`Order ${order.order_no} · ${rupees(order.total_paise/100)}`);
+    const widget=new Razorpay({key:checkout.key_id,order_id:checkout.razorpay_order_id,amount:checkout.amount,currency:checkout.currency,name:checkout.name,description:checkout.description,handler:async result=>{
+      try{
+        checkoutMessage('Verifying payment with the server…');
+        const verified=await fetchJson('/api/payments/razorpay/verify',{method:'POST',body:JSON.stringify({order_no:checkout.order_no,razorpay_order_id:result.razorpay_order_id,razorpay_payment_id:result.razorpay_payment_id,razorpay_signature:result.razorpay_signature,status_token:checkout.status_token})});
+        if(verified.status==='paid'){checkoutMessage(`Payment verified. Order ${checkout.order_no} is paid.`);document.getElementById('razorpayNotice').textContent='The server verified the captured payment.';sessionStorage.removeItem('jini-checkout-key')}
+        else await monitorPayment(checkout.order_no,checkout.status_token);
+      }catch(error){checkoutMessage(`Payment submitted; server verification is pending. Order ${checkout.order_no}. ${error.message}`)}
+    },modal:{ondismiss:()=>{monitorPayment(checkout.order_no,checkout.status_token).catch(error=>checkoutMessage(`Order ${checkout.order_no}: ${error.message}`))}}});
+    widget.open();
+  }catch(error){checkoutMessage(`Checkout unavailable: ${error.message}`)}
+});
 document.getElementById('counterButton').addEventListener('click',()=>showView('counterView'));
 document.getElementById('backButton').addEventListener('click',()=>showView('paymentView'));
 document.getElementById('counterBackButton').addEventListener('click',()=>showView('paymentView'));
